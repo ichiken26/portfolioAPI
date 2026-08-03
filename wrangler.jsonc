@@ -8,8 +8,8 @@
   "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "portfolio-images" }],
   "vars": {
     "ALLOWED_ORIGINS": "https://kokage-studio.com",
-    "ACCESS_TEAM_DOMAIN": "REPLACE_WITH_TEAM.cloudflareaccess.com",
-    "ACCESS_AUD": "REPLACE_WITH_ACCESS_APPLICATION_AUD",
+    "ACCESS_TEAM_DOMAIN": "cold-salad-4ada.cloudflareaccess.com",
+    "ACCESS_AUD": "5f705bd65c4d9c20962a4252f4739e10d2123a12294f3531937e208c64d724a1",
     "DEV_AUTH_BYPASS": "false"
   }
 }
