@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "portfolio-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-31",
+  "routes": [{ "pattern": "api.kokage-studio.com", "custom_domain": true }],
+  "d1_databases": [{ "binding": "DB", "database_name": "portfolio", "database_id": "REPLACE_WITH_D1_DATABASE_ID", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "portfolio-images" }],
+  "vars": {
+    "ALLOWED_ORIGINS": "https://kokage-studio.com,http://localhost:4321",
+    "ACCESS_TEAM_DOMAIN": "REPLACE_WITH_TEAM.cloudflareaccess.com",
+    "ACCESS_AUD": "REPLACE_WITH_ACCESS_APPLICATION_AUD",
+    "DEV_AUTH_BYPASS": "false"
+  }
+}
