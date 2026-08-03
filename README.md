@@ -18,7 +18,7 @@ npm run dev
 ## Cloudflareの準備
 
 1. `wrangler d1 create portfolio` と `wrangler r2 bucket create portfolio-images` を実行します。
-2. 返されたD1 IDだけを `wrangler.jsonc` の `REPLACE_WITH_D1_DATABASE_ID` と置換します。
+2. D1 `portfolio` のIDが `wrangler.jsonc` の `DB` bindingに設定されていることを確認します。
 3. Zero TrustでGoogleをIdPにし、`kokage-studio.com/admin/*` とAPIの `/api/v1/admin/*` を同じAccess Applicationで保護します。
 4. Access Application AUDを `ACCESS_AUD`、チームドメイン（例: `team.cloudflareaccess.com`）を `ACCESS_TEAM_DOMAIN` に設定します。
 5. `ALLOWED_ORIGINS=https://kokage-studio.com` とし、`api.kokage-studio.com` のcustom domainを有効化します。
