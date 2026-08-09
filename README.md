@@ -2,6 +2,8 @@
 
 `kokage-studio.com` の公開コンテンツとCMSを支える Cloudflare Workers APIです。Hono、D1、R2を使用します。公開APIは公開済みデータだけを返し、`/api/v1/admin/*` はCloudflare Access JWTを署名・issuer・audience・有効期限まで検証します。
 
+固定ページは`custom_pages`にMarkdown本文として保存します。公開ページ一覧・詳細は`/api/v1/pages`と`/api/v1/pages/:slug`、管理CRUDは`/api/v1/admin/pages/*`から提供します。
+
 ## ローカル開発
 
 Node.js 22.12以上を使用します。

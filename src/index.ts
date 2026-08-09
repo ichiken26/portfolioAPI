@@ -3,7 +3,7 @@ import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { ZodError } from "zod";
 import { requireAccess } from "./auth";
-import { aboutSchema, contentUpdateSchema, productSchema, productsPageSchema, slugSchema, techSchema } from "./schemas";
+import { aboutSchema, contentUpdateSchema, customPageSchema, pageSlugSchema, productSchema, productsPageSchema, slugSchema, techSchema } from "./schemas";
 import type { ContentKind, Env } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -50,6 +50,19 @@ api.get("/images/:key", async (c) => {
   const object = await c.env.IMAGES.get(key);
   if (!object) return c.notFound();
   return new Response(object.body, { headers: { "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream", "Cache-Control": "public, max-age=31536000, immutable", "X-Content-Type-Options": "nosniff" } });
+});
+api.get("/pages", async (c) => {
+  const result = await c.env.DB.prepare("SELECT slug, data, sort_order FROM custom_pages WHERE published = 1 ORDER BY sort_order, slug").all<{ slug: string; data: string; sort_order: number }>();
+  c.header("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
+  return c.json({ pages: result.results.map((row) => { const data = parse<{ title: string; navLabel: string; description: string }>(row.data); return { slug: row.slug, title: data.title, navLabel: data.navLabel, description: data.description, order: row.sort_order }; }) });
+});
+api.get("/pages/:slug", async (c) => {
+  const slug = pageSlugSchema.safeParse(c.req.param("slug"));
+  if (!slug.success) return c.notFound();
+  const row = await c.env.DB.prepare("SELECT data, version, updated_at, sort_order FROM custom_pages WHERE slug = ? AND published = 1").bind(slug.data).first<{ data: string; version: number; updated_at: string; sort_order: number }>();
+  if (!row) return c.notFound();
+  c.header("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
+  return c.json({ ...parse<Record<string, unknown>>(row.data), slug: slug.data, published: true, order: row.sort_order, version: row.version, updatedAt: row.updated_at });
 });
 
 api.use("/admin/*", requireAccess);
@@ -124,6 +137,37 @@ api.delete("/admin/images/:key", async (c) => {
   if (!/^[a-f0-9-]{36}\.(?:jpg|png|gif)$/.test(key)) return c.json({ error: { code: "VALIDATION_ERROR", message: "Invalid image key" } }, 400);
   await c.env.IMAGES.delete(key);
   return c.body(null, 204);
+});
+api.get("/admin/pages", async (c) => {
+  const result = await c.env.DB.prepare("SELECT slug, data, published, sort_order, version, updated_at FROM custom_pages ORDER BY sort_order, slug").all<{ slug: string; data: string; published: number; sort_order: number; version: number; updated_at: string }>();
+  return c.json({ pages: result.results.map((row) => ({ ...parse<Record<string, unknown>>(row.data), slug: row.slug, published: Boolean(row.published), order: row.sort_order, version: row.version, updatedAt: row.updated_at })) });
+});
+api.get("/admin/pages/:slug", async (c) => {
+  const slug = pageSlugSchema.parse(c.req.param("slug"));
+  const row = await c.env.DB.prepare("SELECT data, published, sort_order, version, updated_at FROM custom_pages WHERE slug = ?").bind(slug).first<{ data: string; published: number; sort_order: number; version: number; updated_at: string }>();
+  if (!row) return c.notFound();
+  return c.json({ ...parse<Record<string, unknown>>(row.data), slug, published: Boolean(row.published), order: row.sort_order, version: row.version, updatedAt: row.updated_at });
+});
+api.post("/admin/pages", async (c) => {
+  const page = customPageSchema.parse(await c.req.json());
+  const { slug, published, order, ...data } = page;
+  const result = await c.env.DB.prepare("INSERT OR IGNORE INTO custom_pages (slug, data, published, sort_order) VALUES (?, ?, ?, ?)").bind(slug, JSON.stringify(data), published ? 1 : 0, order).run();
+  if (result.meta.changes !== 1) return c.json({ error: { code: "ALREADY_EXISTS", message: "Slug already exists" } }, 409);
+  return c.json({ ...page, version: 0 }, 201);
+});
+api.put("/admin/pages/:slug", async (c) => {
+  const currentSlug = pageSlugSchema.parse(c.req.param("slug"));
+  const page = customPageSchema.parse(await c.req.json());
+  if (page.slug !== currentSlug) return c.json({ error: { code: "IMMUTABLE_SLUG", message: "Slug cannot be changed" } }, 400);
+  const { slug, published, order, version = 0, ...data } = page;
+  const result = await c.env.DB.prepare("UPDATE custom_pages SET data = ?, published = ?, sort_order = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP WHERE slug = ? AND version = ?").bind(JSON.stringify(data), published ? 1 : 0, order, slug, version).run();
+  if (result.meta.changes !== 1) return c.json({ error: { code: "VERSION_CONFLICT", message: "Page was changed elsewhere; reload before saving" } }, 409);
+  return c.json({ ...page, version: version + 1 });
+});
+api.delete("/admin/pages/:slug", async (c) => {
+  const slug = pageSlugSchema.parse(c.req.param("slug"));
+  const result = await c.env.DB.prepare("DELETE FROM custom_pages WHERE slug = ?").bind(slug).run();
+  return result.meta.changes ? c.body(null, 204) : c.notFound();
 });
 
 app.route("/api/v1", api);

@@ -2,6 +2,12 @@ import { z } from "zod";
 
 const safeUrl = z.union([z.literal(""), z.string().url().refine((v) => ["http:", "https:"].includes(new URL(v).protocol), "HTTP(S) URL only")]);
 export const slugSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80);
+const reservedPageSlugs = new Set(["admin", "api", "about", "tech-stack", "products", "_astro", "_image"]);
+export const pageSlugSchema = slugSchema.refine((value) => !reservedPageSlugs.has(value), "Reserved page slug");
+export const customPageSchema = z.object({
+  slug: pageSlugSchema, title: z.string().min(1).max(160), navLabel: z.string().min(1).max(80), description: z.string().max(3000),
+  body: z.string().max(200000), published: z.boolean(), order: z.number().int().min(0).max(100000), version: z.number().int().nonnegative().optional(),
+});
 export const aboutBlockSchema = z.discriminatedUnion("type", [
   z.object({ id: z.string().min(1).max(80), title: z.string().min(1).max(100), type: z.literal("text"), text: z.string().max(20000) }),
   z.object({ id: z.string().min(1).max(80), title: z.string().min(1).max(100), type: z.literal("list"), items: z.array(z.string().max(1000)).max(100) }),
