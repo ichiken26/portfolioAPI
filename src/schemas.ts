@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-const safeUrl = z.union([z.literal(""), z.string().url().refine((v) => ["http:", "https:"].includes(new URL(v).protocol), "HTTP(S) URL only")]);
+const isHttpUrl = (value: string) => {
+  try {
+    return ["http:", "https:"].includes(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+};
+const safeUrl = z.union([z.literal(""), z.string().refine(isHttpUrl, "Valid HTTP(S) URL required")]);
 export const slugSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80);
 const reservedPageSlugs = new Set(["admin", "api", "about", "tech-stack", "products", "_astro", "_image"]);
 export const pageSlugSchema = slugSchema.refine((value) => !reservedPageSlugs.has(value), "Reserved page slug");

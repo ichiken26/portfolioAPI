@@ -84,14 +84,14 @@ api.put("/admin/content/:kind", async (c) => {
   return c.json({ data, published: input.published, version: input.version + 1 });
 });
 api.get("/admin/products", async (c) => {
-  const result = await c.env.DB.prepare("SELECT slug, data, published, version, updated_at FROM products ORDER BY sort_order, slug").all<{ slug: string; data: string; published: number; version: number; updated_at: string }>();
-  return c.json({ products: result.results.map((r) => ({ ...parse<Record<string, unknown>>(r.data), slug: r.slug, published: Boolean(r.published), version: r.version, updatedAt: r.updated_at })) });
+  const result = await c.env.DB.prepare("SELECT slug, data, published, sort_order, version, updated_at FROM products ORDER BY sort_order, slug").all<{ slug: string; data: string; published: number; sort_order: number; version: number; updated_at: string }>();
+  return c.json({ products: result.results.map((r) => ({ ...parse<Record<string, unknown>>(r.data), slug: r.slug, published: Boolean(r.published), order: r.sort_order, version: r.version, updatedAt: r.updated_at })) });
 });
 api.get("/admin/products/:slug", async (c) => {
   const slug = slugSchema.parse(c.req.param("slug"));
-  const row = await c.env.DB.prepare("SELECT data, published, version, updated_at FROM products WHERE slug = ?").bind(slug).first<{ data: string; published: number; version: number; updated_at: string }>();
+  const row = await c.env.DB.prepare("SELECT data, published, sort_order, version, updated_at FROM products WHERE slug = ?").bind(slug).first<{ data: string; published: number; sort_order: number; version: number; updated_at: string }>();
   if (!row) return c.notFound();
-  return c.json({ ...parse<Record<string, unknown>>(row.data), slug, published: Boolean(row.published), version: row.version, updatedAt: row.updated_at });
+  return c.json({ ...parse<Record<string, unknown>>(row.data), slug, published: Boolean(row.published), order: row.sort_order, version: row.version, updatedAt: row.updated_at });
 });
 api.post("/admin/products", async (c) => {
   const product = productSchema.parse(await c.req.json());
