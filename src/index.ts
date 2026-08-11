@@ -12,7 +12,11 @@ const kinds = new Set<ContentKind>(["about", "tech-stack", "products"]);
 const parse = <T>(value: string): T => JSON.parse(value) as T;
 const contentSchema = (kind: ContentKind) => kind === "about" ? aboutSchema : kind === "tech-stack" ? techSchema : productsPageSchema.omit({ published: true, version: true });
 
-app.use("*", secureHeaders());
+app.use("*", async (c, next) => {
+  await next();
+  c.header("Cross-Origin-Resource-Policy", c.req.path.startsWith("/api/v1/images/") ? "cross-origin" : "same-origin");
+});
+app.use("*", secureHeaders({ crossOriginResourcePolicy: false }));
 app.use("*", async (c, next) => cors({
   origin: (origin) => c.env.ALLOWED_ORIGINS.split(",").map((v) => v.trim()).includes(origin) ? origin : "",
   allowMethods: ["GET", "PUT", "POST", "DELETE", "OPTIONS"], allowHeaders: ["Content-Type", "If-Match", "Cf-Access-Jwt-Assertion"], exposeHeaders: ["ETag"], maxAge: 86400,
@@ -49,7 +53,7 @@ api.get("/images/:key", async (c) => {
   if (!/^[a-f0-9-]{36}\.(?:jpg|png|gif)$/.test(key)) return c.notFound();
   const object = await c.env.IMAGES.get(key);
   if (!object) return c.notFound();
-  return new Response(object.body, { headers: { "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream", "Cache-Control": "public, max-age=31536000, immutable", "X-Content-Type-Options": "nosniff" } });
+  return new Response(object.body, { headers: { "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream", "Cache-Control": "public, max-age=31536000, immutable", "Cross-Origin-Resource-Policy": "cross-origin", "X-Content-Type-Options": "nosniff" } });
 });
 api.get("/pages", async (c) => {
   const result = await c.env.DB.prepare("SELECT slug, data, sort_order FROM custom_pages WHERE published = 1 ORDER BY sort_order, slug").all<{ slug: string; data: string; sort_order: number }>();
