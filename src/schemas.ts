@@ -9,7 +9,7 @@ const isHttpUrl = (value: string) => {
 };
 const safeUrl = z.union([z.literal(""), z.string().refine(isHttpUrl, "Valid HTTP(S) URL required")]);
 export const slugSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80);
-const reservedPageSlugs = new Set(["admin", "api", "about", "tech-stack", "products", "_astro", "_image"]);
+const reservedPageSlugs = new Set(["admin", "api", "about", "tech-stack", "products", "privacy-policy", "use-kiyaku", "_astro", "_image"]);
 export const pageSlugSchema = slugSchema.refine((value) => !reservedPageSlugs.has(value), "Reserved page slug");
 export const customPageSchema = z.object({
   slug: pageSlugSchema, title: z.string().min(1).max(160), navLabel: z.string().min(1).max(80), description: z.string().max(3000),
